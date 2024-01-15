@@ -1,0 +1,147 @@
+mql5
+//+------------------------------------------------------------------+
+//|                                            SupplyDemandMT5.mq5   |
+//|                        Copyright 2022, Forex Robot Easy Team     |
+//|                                             www.forexroboteasy.com   |
+//+------------------------------------------------------------------+
+
+// Define input parameters
+input int lookbackPeriod = 20; // Number of bars to look back for supply and demand zones
+input double thresholdPercentage = 0.5; // Percentage deviation from mean price to identify zones
+input int stopLossPips = 10; // Stop loss in pips for each trade
+
+// Define global variables
+double supplyZoneHigh, supplyZoneLow, demandZoneHigh, demandZoneLow;
+
+//+------------------------------------------------------------------+
+//| Expert initialization function                                   |
+//+------------------------------------------------------------------+
+int OnInit()
+{
+    // Set the indicator buffers
+    SetIndexBuffer(0, supplyZoneHigh);
+    SetIndexBuffer(1, supplyZoneLow);
+    SetIndexBuffer(2, demandZoneHigh);
+    SetIndexBuffer(3, demandZoneLow);
+
+    // Set indicator labels
+    ObjectCreate(0, 'Supply Zone High', OBJ_LABEL, 0, 0, 0);
+    ObjectSetText(0, 'Supply Zone High', 12, 'Arial', Yellow);
+    ObjectCreate(0, 'Supply Zone Low', OBJ_LABEL, 0, 0, 0);
+    ObjectSetText(0, 'Supply Zone Low', 12, 'Arial', Yellow);
+    ObjectCreate(0, 'Demand Zone High', OBJ_LABEL, 0, 0, 0);
+    ObjectSetText(0, 'Demand Zone High', 12, 'Arial', Lime);
+    ObjectCreate(0, 'Demand Zone Low', OBJ_LABEL, 0, 0, 0);
+    ObjectSetText(0, 'Demand Zone Low', 12, 'Arial', Lime);
+
+    return INIT_SUCCEEDED;
+}
+
+//+------------------------------------------------------------------+
+//| Expert deinitialization function                                 |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+{
+    // Delete indicator labels
+    ObjectDelete(0, 'Supply Zone High');
+    ObjectDelete(0, 'Supply Zone Low');
+    ObjectDelete(0, 'Demand Zone High');
+    ObjectDelete(0, 'Demand Zone Low');
+}
+
+//+------------------------------------------------------------------+
+//| Expert start function                                            |
+//+------------------------------------------------------------------+
+void OnTick()
+{
+    // Calculate supply and demand zones
+    CalculateSupplyDemandZones();
+
+    // Check for potential trades
+    CheckForTrades();
+}
+
+//+------------------------------------------------------------------+
+//| Function to calculate supply and demand zones                     |
+//+------------------------------------------------------------------+
+void CalculateSupplyDemandZones()
+{
+    int bars = Bars(_Symbol, _Period);
+    double meanPrice = iMA(_Symbol, _Period, lookbackPeriod, 0, MODE_SMA, PRICE_CLOSE);
+
+    // Calculate supply zone
+    double supplyThreshold = meanPrice + (meanPrice * thresholdPercentage / 100);
+    for (int i = 0; i < bars; i++)
+    {
+        double high = High[i];
+        double low = Low[i];
+
+        if (high >= supplyThreshold)
+        {
+            supplyZoneHigh = high;
+            supplyZoneLow = low;
+            break;
+        }
+    }
+
+    // Calculate demand zone
+    double demandThreshold = meanPrice - (meanPrice * thresholdPercentage / 100);
+    for (int i = 0; i < bars; i++)
+    {
+        double high = High[i];
+        double low = Low[i];
+
+        if (low <= demandThreshold)
+        {
+            demandZoneHigh = high;
+            demandZoneLow = low;
+            break;
+        }
+    }
+
+    // Plot supply and demand zones on chart
+    ObjectSet('Supply Zone High', OBJPROP_PRICE, supplyZoneHigh);
+    ObjectSet('Supply Zone Low', OBJPROP_PRICE, supplyZoneLow);
+    ObjectSet('Demand Zone High', OBJPROP_PRICE, demandZoneHigh);
+    ObjectSet('Demand Zone Low', OBJPROP_PRICE, demandZoneLow);
+}
+
+//+------------------------------------------------------------------+
+//| Function to check for potential trades                            |
+//+------------------------------------------------------------------+
+void CheckForTrades()
+{
+    double currentPrice = Close[0];
+
+    // Check for sell trade
+    if (currentPrice <= supplyZoneLow)
+    {
+        double stopLossPrice = currentPrice + (stopLossPips * _Point);
+        Sell(stopLossPrice);
+    }
+
+    // Check for buy trade
+    if (currentPrice >= demandZoneHigh)
+    {
+        double stopLossPrice = currentPrice - (stopLossPips * _Point);
+        Buy(stopLossPrice);
+    }
+}
+
+//+------------------------------------------------------------------+
+//| Function to execute a sell trade                                  |
+//+------------------------------------------------------------------+
+void Sell(double stopLossPrice)
+{
+    // Place sell order
+    // ...
+}
+
+//+------------------------------------------------------------------+
+//| Function to execute a buy trade                                   |
+//+------------------------------------------------------------------+
+void Buy(double stopLossPrice)
+{
+    // Place buy order
+    // ...
+}
